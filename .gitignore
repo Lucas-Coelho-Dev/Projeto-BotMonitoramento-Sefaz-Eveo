@@ -1,0 +1,27 @@
+# Variáveis sensíveis — NUNCA commitar
+.env
+
+# Banco de dados — gerado automaticamente
+*.db
+
+# Logs — gerados automaticamente
+logs/
+
+# Dependências Node
+node_modules/
+
+# Build TypeScript
+dist/
+
+# Cache
+.cache/
+*.tsbuildinfo
+
+# Certificados digitais (A1)
+*.pfx
+*.p12
+*.pem
+
+# Pastas temporárias / rascunhos
+scratch/
+sete-a-zero-copa/
