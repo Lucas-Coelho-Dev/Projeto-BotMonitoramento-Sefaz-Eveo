@@ -7,7 +7,7 @@ Sistema corporativo de monitoramento em tempo real da disponibilidade de serviç
 ## 📊 1. Visão Geral Executiva
 
 ### O Problema
-Instabilidades e quedas na infraestrutura ou nos autorizadores estaduais da SEFAZ impedem a emissão de notas fiscais nas pontas de vendas (PDVs), gerando filas nos caixas, prejuízos financeiros e insatisfação dos clientes.
+Instabilidades e quedas na infraestrutura ou nos autorizadores estaduais da SEFAZ impedem a emissão de notas fiscais nas pontas de vendas (PDVs), gerando filas nos suportes, prejuízos financeiros e insatisfação dos clientes.
 
 ### A Solução
 Um bot autônomo em **TypeScript (Node.js)** que realiza testes contínuos a cada 60 segundos, aplicando inteligência de **consenso ponderado** para eliminar alarmes falsos, e alertando as equipes certas no momento correto.
