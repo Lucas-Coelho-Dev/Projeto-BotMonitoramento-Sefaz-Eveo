@@ -116,15 +116,16 @@ export class Notifier implements INotifier {
     if (detail) embed.addFields({ name: "📋 Detalhe", value: detail, inline: false });
  
     // Monta a menção apropriada (silenciada no horário silencioso)
+    // CRÍTICO: A menção (roles ou @everyone) SÓ é enviada na PRIMEIRA saída do ONLINE.
+    // Oscilações internas entre INSTÁVEL <-> OFFLINE mandam o card visual SEM marcar ninguém.
     let mention: string | undefined;
 
-    if (!quiet) {
+    if (!quiet && previousStatus === ONLINE) {
       if (newStatus === OFFLINE) {
         mention = buildMention(["ROLE_SUPORTE", "ROLE_IMPLANTACAO"]);
       } else if (newStatus === UNSTABLE) {
         mention = buildMention(["ROLE_SUPORTE"]);
       }
-      // ONLINE (recuperou) → sem menção
     }
 
     try {
