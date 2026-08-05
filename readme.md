@@ -18,22 +18,22 @@ Um bot autônomo em **TypeScript (Node.js)** que realiza testes contínuos a cad
 
 ```mermaid
 graph TD
-    subgraph Fontes de Dados (Tripla Verificação SEFAZ)
-        A[Ping Direto SOAP mTLS - Certificado A1] -->|Peso 4.0| D[Mecanismo de Consenso]
-        B[Scraping Oficial Fazenda Nacional] -->|Peso 2.0| D
-        C[API Pública Webmania] -->|Peso 1.0| D
+    subgraph S1["Fontes de Dados (Tripla Verificação SEFAZ)"]
+        A["Ping Direto SOAP mTLS - Certificado A1"] -->|Peso 4.0| D["Mecanismo de Consenso"]
+        B["Scraping Oficial Fazenda Nacional"] -->|Peso 2.0| D
+        C["API Pública Webmania"] -->|Peso 1.0| D
     end
 
-    subgraph Núcleo de Processamento
-        D --> E[Filtro Anti-Flapping / Debounce 3 Ciclos]
-        E --> F[(Banco SQLite - incident_log)]
+    subgraph S2["Núcleo de Processamento"]
+        D --> E["Filtro Anti-Flapping / Debounce 3 Ciclos"]
+        E --> F[("Banco SQLite - incident_log")]
     end
 
-    subgraph Notificação Inteligente (Discord)
-        F --> G{Horário Silencioso?}
-        G -->|Sim 22h-08h| H[Log em Silêncio / Sem Menção]
-        G -->|Não 08h-22h| I[Disparo com Menção de Cargos]
-        H --> J[Relatório Matinal às 09h]
+    subgraph S3["Notificação Inteligente (Discord)"]
+        F --> G{"Horário Silencioso?"}
+        G -->|Sim 22h-08h| H["Log em Silêncio / Sem Menção"]
+        G -->|Não 08h-22h| I["Disparo com Menção de Cargos"]
+        H --> J["Relatório Matinal às 09h"]
     end
 ```
 
