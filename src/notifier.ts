@@ -116,15 +116,30 @@ export class Notifier implements INotifier {
     if (detail) embed.addFields({ name: "📋 Detalhe", value: detail, inline: false });
  
     // Monta a menção apropriada (silenciada no horário silencioso)
-    // CRÍTICO: A menção (roles ou @everyone) SÓ é enviada na PRIMEIRA saída do ONLINE.
-    // Oscilações internas entre INSTÁVEL <-> OFFLINE mandam o card visual SEM marcar ninguém.
+    // Regra dos 30 minutos: Se o MESMO servidor/monitor caiu novamente em menos de 30 minutos,
+    // envia o card visual de alerta no Discord, mas NÃO marca ninguém (suprime @everyone / roles).
     let mention: string | undefined;
+    const MENTION_INTERVAL_MS = 30 * 60 * 1000; // 30 minutos em ms
 
     if (!quiet && previousStatus === ONLINE) {
-      if (newStatus === OFFLINE) {
-        mention = buildMention(["ROLE_SUPORTE", "ROLE_IMPLANTACAO"]);
-      } else if (newStatus === UNSTABLE) {
-        mention = buildMention(["ROLE_SUPORTE"]);
+      const now = Date.now();
+      const elapsedSinceLastMention = now - monitor.lastMentionAt;
+
+      if (monitor.lastMentionAt === 0 || elapsedSinceLastMention >= MENTION_INTERVAL_MS) {
+        if (newStatus === OFFLINE) {
+          mention = buildMention(["ROLE_SUPORTE", "ROLE_IMPLANTACAO"]);
+        } else if (newStatus === UNSTABLE) {
+          mention = buildMention(["ROLE_SUPORTE"]);
+        }
+
+        if (mention) {
+          monitor.lastMentionAt = now; // Atualiza o timestamp da última menção enviada
+        }
+      } else {
+        const minAgo = Math.round(elapsedSinceLastMention / 60000);
+        logger.info(
+          `[${monitor.displayName}] Menção suprimida: última menção enviada há ${minAgo}min (< 30min)`
+        );
       }
     }
 

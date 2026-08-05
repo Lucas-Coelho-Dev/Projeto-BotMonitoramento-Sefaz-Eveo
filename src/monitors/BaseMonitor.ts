@@ -71,12 +71,10 @@ export abstract class BaseMonitor {
  
   _status: string;
   private badCount = 0;         // contador de ciclos consecutivos com status != ONLINE
-  private lastAlertAt = 0;      // timestamp do último alerta enviado (cooldown)
+  lastMentionAt = 0;            // timestamp da última menção (@everyone/roles) enviada para este monitor
   _responseMs: number | null = null;
   _lastChecked: string | null = null; // horário formatado em Brasília
   _detail = "";
-
-  private static readonly ALERT_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutos
  
   constructor(notifier: INotifier, displayName: string) {
     this.notifier    = notifier;
