@@ -292,25 +292,39 @@ async function runGetPingFallback(
       results.set(component, SRC_ONLINE);
     }
   } catch (err: any) {
-    const isSslRejection =
+    const elapsed = Date.now() - startTime;
+
+    const isSslRelated =
       err.code === "ECONNRESET" ||
       err.code === "EPROTO" ||
       (err.message && err.message.toLowerCase().includes("certificate"));
 
-    const elapsed = Date.now() - startTime;
+    // ── Distinção entre rejeição TLS legítima vs queda real ──────────────
+    // Se o erro foi RÁPIDO (< 3 segundos) e é SSL-related, provavelmente o
+    // servidor está VIVO mas rejeitou nosso handshake TLS (comportamento normal
+    // da SEFAZ sem certificado mTLS no GET). → ONLINE
+    //
+    // Se o erro DEMOROU (>= 3 segundos), significa que o servidor travou ou
+    // está fora do ar — o reset/proto veio APÓS tentativa prolongada. → OFFLINE
+    const FAST_REJECTION_MS = 3000;
 
-    if (isSslRejection) {
-      if (elapsed > 15000) {
-        results.set(component, SRC_UNSTABLE);
-        log.info(`SEFAZ ${component} rejeitou TLS (Handshake ok) via Fallback GET mas com latência alta: ${elapsed}ms (Muito Lento)`);
-      } else {
-        results.set(component, SRC_ONLINE);
-      }
+    if (isSslRelated && elapsed < FAST_REJECTION_MS) {
+      // Rejeição TLS rápida = servidor respondendo, está vivo
+      results.set(component, SRC_ONLINE);
+    } else if (isSslRelated && elapsed >= FAST_REJECTION_MS && elapsed <= 15000) {
+      // Reset/proto entre 3s e 15s = servidor com problemas
+      results.set(component, SRC_UNSTABLE);
+      log.warn(
+        `SEFAZ ${component} retornou ${err.code} após ${elapsed}ms (servidor com problemas). ` +
+        `SOAP: ${soapErrorMsg || "N/A"}`
+      );
     } else {
+      // Timeout, ECONNREFUSED, ou SSL lento (>15s) = servidor caído
       results.set(component, SRC_OFFLINE);
       log.warn(
         `Ping Direto falhou para ${component} (${url}). ` +
-        `SOAP: ${soapErrorMsg || "N/A"} | Fallback: ${err.message}`
+        `Erro: ${err.code || err.message} em ${elapsed}ms | ` +
+        `SOAP: ${soapErrorMsg || "N/A"}`
       );
     }
   }
