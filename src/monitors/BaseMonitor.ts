@@ -71,7 +71,6 @@ export abstract class BaseMonitor {
  
   _status: string;
   private badCount = 0;         // contador de ciclos consecutivos com status != ONLINE
-  lastMentionAt = 0;            // timestamp da última menção (@everyone/roles) enviada para este monitor
   _responseMs: number | null = null;
   _lastChecked: string | null = null; // horário formatado em Brasília
   _detail = "";

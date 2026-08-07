@@ -81,6 +81,26 @@ export function buildMention(roleKeys: (keyof typeof config)[]): string {
   return roleIds.map((id) => `<@&${id}>`).join(" ");
 }
 
+/**
+ * Cooldown GLOBAL de menções (@everyone / roles).
+ *
+ * REGRA DE 2 HORAS:
+ *   - Quando QUALQUER monitor (NF-e ou NFC-e) emite @everyone pela primeira vez,
+ *     o timestamp é registrado nesta variável compartilhada.
+ *   - Dentro da janela de 2 horas, NENHUM monitor emite menções sonoras,
+ *     mesmo que caia novamente ou que outro monitor diferente caia.
+ *   - Após 2 horas do primeiro @everyone, a próxima queda volta a mencionar.
+ *
+ * EXEMPLO:
+ *   14:40 → MT cai (NF-e)  → @everyone ✅ (primeira queda, timer inicia)
+ *   14:50 → MT volta
+ *   15:20 → MT cai de novo  → card visual SEM @everyone (ainda dentro das 2h)
+ *   15:50 → MT volta
+ *   16:41 → MT cai de novo  → @everyone ✅ (2h+ desde 14:40, timer reinicia)
+ */
+let lastGlobalMentionAt = 0;
+const MENTION_COOLDOWN_MS = 2 * 60 * 60 * 1000; // 2 horas em milissegundos
+
 export class Notifier implements INotifier {
   constructor(private channel: TextChannel) {}
  
@@ -115,17 +135,19 @@ export class Notifier implements INotifier {
  
     if (detail) embed.addFields({ name: "📋 Detalhe", value: detail, inline: false });
  
-    // Monta a menção apropriada (silenciada no horário silencioso)
-    // Regra dos 30 minutos: Se o MESMO servidor/monitor caiu novamente em menos de 30 minutos,
-    // envia o card visual de alerta no Discord, mas NÃO marca ninguém (suprime @everyone / roles).
+    // ── Lógica de Menção com Cooldown GLOBAL de 2 Horas ──────────────────
+    // A menção SÓ é emitida quando:
+    //   1. O status anterior era ONLINE (transição real de queda)
+    //   2. NÃO está no horário silencioso
+    //   3. Passaram-se 2+ horas desde a ÚLTIMA menção GLOBAL (qualquer monitor)
     let mention: string | undefined;
-    const MENTION_INTERVAL_MS = 30 * 60 * 1000; // 30 minutos em ms
 
     if (!quiet && previousStatus === ONLINE) {
       const now = Date.now();
-      const elapsedSinceLastMention = now - monitor.lastMentionAt;
+      const elapsed = now - lastGlobalMentionAt;
 
-      if (monitor.lastMentionAt === 0 || elapsedSinceLastMention >= MENTION_INTERVAL_MS) {
+      if (lastGlobalMentionAt === 0 || elapsed >= MENTION_COOLDOWN_MS) {
+        // Janela de 2h expirada (ou primeira vez) → emite menção
         if (newStatus === OFFLINE) {
           mention = buildMention(["ROLE_SUPORTE", "ROLE_IMPLANTACAO"]);
         } else if (newStatus === UNSTABLE) {
@@ -133,12 +155,15 @@ export class Notifier implements INotifier {
         }
 
         if (mention) {
-          monitor.lastMentionAt = now; // Atualiza o timestamp da última menção enviada
+          lastGlobalMentionAt = now;
+          logger.info(`[GLOBAL] Menção emitida para ${monitor.displayName}. Próxima menção liberada em 2h.`);
         }
       } else {
-        const minAgo = Math.round(elapsedSinceLastMention / 60000);
+        // Ainda dentro da janela de 2h → suprime menção, envia apenas o card visual
+        const minRestantes = Math.round((MENTION_COOLDOWN_MS - elapsed) / 60000);
         logger.info(
-          `[${monitor.displayName}] Menção suprimida: última menção enviada há ${minAgo}min (< 30min)`
+          `[${monitor.displayName}] Menção suprimida (cooldown global de 2h). ` +
+          `Próxima menção liberada em ~${minRestantes}min.`
         );
       }
     }
